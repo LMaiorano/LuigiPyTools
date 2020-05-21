@@ -7,7 +7,6 @@ project: DSE-Mars-Reveal
 date: 5/18/2020
 author: lmaio
 """
-from __future__ import print_function
 from datetime import datetime
 import pickle
 import os.path
@@ -139,9 +138,6 @@ if __name__ == '__main__':
 
     Gcal = GooglePy(SCOPES, cal_api_creds)
     # Gcal._get_calendar_ids()
-
-    DSE_logbook = '1s6hVN_ZvYR4h6NqPZdcWipviXMCC_8VllLfqobYJ1qc'
-    Gcal.get_spreadsheet(DSE_logbook, 'Luigi!B3:E58')
 
     # tu_timetable = '8r63unklasvr8dgcjenfm9odh2ptkk46@import.calendar.google.com'
     # events = Gcal.get_calendar(tu_timetable)
