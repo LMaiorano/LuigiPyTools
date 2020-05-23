@@ -71,7 +71,7 @@ class GooglePy():
         return service
 
 
-    def get_spreadsheet(self, spreadsheet_id, range_name):
+    def _api_get_spreadsheet(self, spreadsheet_id, range_name):
         if 'sheets' not in self.scope_types:
             raise AttributeError('Incorrect api scope')
         # Call the Sheets API
@@ -84,6 +84,40 @@ class GooglePy():
         # full = service.spreadsheets().get(spreadsheetId=spreadsheet_id, ranges=range_name, includeGridData=True).execute()
 
         return values
+
+    def get_spreadsheet(self, spreadsheet_id, range_name, header_row=False):
+        # '''
+        # Retrieves google spreadsheet data to Pandas DataFrame
+        #
+        # Args:
+        #     spreadsheet_id (str): Google sheet ID, found in the spreadsheet URL
+        #     range_name (str): Range of cells to be extracted. Eg: "Sheet1!A2:J15"
+        #     header_row (bool, optional): Whether the first row contains table column names (headers). Defaults to False.
+        #
+        # Returns:
+        #     DataFrame: Pandas DataFrame of selected range
+        # '''
+        '''
+
+        Parameters
+        ----------
+        spreadsheet_id
+        range_name
+        header_row
+
+        Returns
+        -------
+
+        '''
+
+        values = self._api_get_spreadsheet(spreadsheet_id, range_name)
+        if header_row:
+            df = pd.DataFrame.from_records(values[1:], columns=values[0])
+        else:
+            df = pd.DataFrame.from_records(values)
+        return df
+
+
 
     def daily_log(self, values):
         df = pd.DataFrame.from_records(values[1:], columns=values[0])
@@ -127,6 +161,8 @@ class GooglePy():
         events = events_result.get('items', [])
 
         return events
+
+
 
 
 
