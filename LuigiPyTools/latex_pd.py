@@ -13,6 +13,7 @@ TODO:
 """
 import pandas as pd
 import numpy as np
+import ntpath
 
 class LatexPandas():
     def __init__(self, dataframe, col_width=45):
@@ -91,8 +92,14 @@ class LatexPandas():
         elif len(col_form) == 1:
             col_form = col_form*len(self._df.columns)
 
+        comment_header = '% ---- Generated using LuigiPyTools.LatexPandas module ---- \n\n\n% Include the following line in preamble' \
+                         ' to specify space between grouped rows in tables \n% \\newcommand{\\tableskip}{5pt} \n\n% To' \
+                         ' include this table, use at the desired location in the document: \n' \
+                         '% \\input{'+ntpath.basename(fname)+'}\n\n'
+
         with open(fname, 'w') as tf:
             with pd.option_context("max_colwidth", 1000):
+                tf.write(comment_header)
                 tf.write('\\begin{table}[H]\n\\centering \n\\caption{'+caption+'}\\label{'+label+'} \n')
                 tf.write('\\resizebox{\\textwidth}{!}{\n')
                 tf.write(self._df.to_latex(float_format="%.3f", escape=False, index=False,

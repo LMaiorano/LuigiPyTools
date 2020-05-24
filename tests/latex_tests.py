@@ -12,7 +12,6 @@ import pandas as pd
 from LuigiPyTools import LatexPandas
 
 
-
 def test_latex():
 
     dummy_df = pd.read_csv('./data/dummy_data.csv')

@@ -1,3 +1,4 @@
 v0.1.0; 21-5-2020; -- Initial release.
 v0.1.1; 21-5-2020; added License, manifest, changes, and dependencies
 v0.2.0; 24-5-2020; Added docstrings to functions, removed unused functions, renamed get_calendar to get_calendar_events
+v0.2.1; 24-5-2020; Added header to LatexPandas output

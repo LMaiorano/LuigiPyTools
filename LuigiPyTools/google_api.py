@@ -14,16 +14,17 @@ TODO:
 
 """
 
-from datetime import datetime
-import pickle
-import os.path
-import pandas as pd
 import json
 import os
-from googleapiclient.discovery import build, Resource
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
+import os.path
+import pickle
 import warnings
+from datetime import datetime
+
+import pandas as pd
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 
 class GooglePy():
