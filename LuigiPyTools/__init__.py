@@ -10,3 +10,4 @@ author: lmaio
 from LuigiPyTools.google_api import GooglePy
 from LuigiPyTools.latex_pd import LatexPandas
 
+__all__ = ['GooglePy', 'LatexPandas']

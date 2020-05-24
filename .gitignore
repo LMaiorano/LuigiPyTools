@@ -119,7 +119,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-strava_env/
+
 
 # Spyder project settings
 .spyderproject
@@ -141,3 +141,6 @@ dmypy.json
 
 # custom libraries
 .pyd
+
+# Local testing
+auth/

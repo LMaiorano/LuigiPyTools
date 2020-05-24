@@ -11,4 +11,4 @@ author: lmaio
 from LuigiPyTools import GooglePy
 
 
-print(GooglePy.__doc__)
+help(GooglePy)
