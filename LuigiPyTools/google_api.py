@@ -10,7 +10,7 @@ author: lmaio
 
 
 TODO:
-    - Add 'auth/' dir detection or creation for saving creds and tokens
+    - examples
 
 """
 
@@ -33,7 +33,7 @@ class GooglePy():
     Interface with Google sheets and calendars
 
     '''
-    def __init__(self, SCOPES, api_credentials):
+    def __init__(self, SCOPES, api_credentials, auth_dir='./auth'):
         '''
 
         Parameters
@@ -43,17 +43,21 @@ class GooglePy():
             Must match authorized scopes of provided api_credentials
         api_credentials: str
             Filepath to api client credentials json
+        auth_dir: str, default './auth'
+            Filepath to directory where authentication tokens should be stored.
+            Directory should be included in .gitignore
         '''
+        self._auth_dir = auth_dir
+        self._create_auth_dir()
         self._scopes = SCOPES
-        '''list of str: Scopes for API call'''
         self.__creds_file = api_credentials
         self._scope_type()
 
     def _create_auth_dir(self):
         '''Create directory for storing tokens and authentication'''
-        if not os.path.exists('auth'):
-            os.makedirs('auth')
-            warnings.warn('Add auth/ to your .gitignore for security purposes')
+        if not os.path.exists(self._auth_dir):
+            os.makedirs('./auth')
+            warnings.warn('Add new directory auth/ to your .gitignore for security purposes')
 
     def _scope_type(self):
         self.scope_types = []
@@ -64,24 +68,18 @@ class GooglePy():
                 self.scope_types.append('calendar')
 
     def _service_connect(self, type):
-        '''
-        Connects to appropriate google api service
+        '''Connects to appropriate google api service
 
         Parameters
         ----------
         type: str
             'calendar' or 'sheets'
-
-        Returns
-        -------
-
         '''
         creds = None
-        TOKEN_DIR = os.path.dirname(self.__creds_file)
         # The file token.pickle stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
         # time.
-        token_file = os.path.join(TOKEN_DIR, 'token.pickle')
+        token_file = os.path.join(self._auth_dir, 'token.pickle')
         if os.path.exists(token_file):
             with open(token_file, 'rb') as token:
                 creds = pickle.load(token)
