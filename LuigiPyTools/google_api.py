@@ -19,6 +19,7 @@ import os
 import os.path
 import pickle
 import warnings
+import inspect
 from datetime import datetime
 
 import pandas as pd
@@ -34,7 +35,7 @@ class GooglePy():
     Interface with Google sheets and calendars
 
     '''
-    def __init__(self, SCOPES, api_credentials, auth_dir='./auth'):
+    def __init__(self, SCOPES, api_credentials, auth_dir=None):
         '''
 
         Parameters
@@ -48,8 +49,16 @@ class GooglePy():
             Filepath to directory where authentication tokens should be stored.
             Directory should be included in .gitignore
         '''
-        self._auth_dir = auth_dir
+        # Directory of script which is creating this object. Must run here in __init__
+        frame = inspect.stack()[1]
+        module = inspect.getmodule(frame[0])
+        self.__call_module_dir = os.path.dirname(module.__file__)
+        if not auth_dir:
+            self._auth_dir = os.path.join(self.__call_module_dir, 'auth')
+        else:
+            self._auth_dir = auth_dir
         self._create_auth_dir()
+
         self._scopes = SCOPES
         self.__creds_file = api_credentials
         self._scope_type()
@@ -57,8 +66,9 @@ class GooglePy():
     def _create_auth_dir(self):
         '''Create directory for storing tokens and authentication'''
         if not os.path.exists(self._auth_dir):
-            os.makedirs('./auth')
-            warnings.warn('Add new directory auth/ to your .gitignore for security purposes')
+            # Also create default auth dir if given is not valid
+            os.makedirs(os.path.join(self.__call_module_dir, 'auth'))
+            warnings.warn('Add "auth/" to your .gitignore for security purposes')
 
     def _scope_type(self):
         self.scope_types = []
