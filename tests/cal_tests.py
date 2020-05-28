@@ -12,7 +12,7 @@ import os
 from LuigiPyTools import GooglePy
 
 def test_calendar_ids():
-    SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/calendar.readonly']
     cal_api_creds = os.path.join(os.path.dirname(__file__), 'py_general_creds.json')
 
     G = GooglePy(SCOPES, cal_api_creds)

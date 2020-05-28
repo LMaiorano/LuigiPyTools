@@ -38,28 +38,45 @@ class LatexPandas():
         return s
 
     def _make_sub_table(self, s):
+        # FIXME: recognize existing line breaks in a cell
         s = self._fix_chars(s)
-        if len(s) > self._max_col_width:
-            words = s.split(' ')
-            len_w = [len(word)+1 for word in words]
-            len_aft_w = np.cumsum(len_w)
-            b = len_aft_w % self._max_col_width
-            c = np.where((b[1:] - b[:-1]) < 0)
 
-            break_idx = len_aft_w[c].tolist()
+        lines = s.split('\n')
+        for idx, s in enumerate(lines):
 
-            ext = 0
-            for i in break_idx:
-                i += ext
-                s = s[:i] + '\\\\' + s[i:]
-                ext += 2
+            if len(s) > self._max_col_width:
+                words = s.split(' ')
+                len_w = [len(word) + 1 for word in words]
+                len_aft_w = np.cumsum(len_w)
+                b = len_aft_w % self._max_col_width
+                c = np.where((b[1:] - b[:-1]) < 0)
 
-            # Wrap with table header
-            tab_st = '\\begin{tabular}[c]{@{}c@{}}'
-            tab_end = '\\end{tabular}'
+                break_idx = len_aft_w[c].tolist()
 
-            s = tab_st + s + tab_end
-        return s
+                ext = 0
+                for i in break_idx:
+                    i += ext
+                    s = s[:i] + '\\\\' + s[i:]
+                    ext += 2
+
+                lines[idx] = s
+
+        # Wrap with table header
+        tab_st = '\\begin{tabular}[c]{@{}c@{}}'
+        tab_end = '\\end{tabular}'
+
+        # recombine list of lines into single string, joining with breakline \\\\
+        create_table = False
+        sub_table = lines[0]
+        for line in lines[1:]:
+            sub_table += '\\\\'
+            sub_table += line
+            create_table = True
+
+        if '\\\\' in sub_table:
+            sub_table = tab_st + sub_table + tab_end
+
+        return sub_table
 
 
     def gen_tex_table(self, fname, caption, label=None, col_form='lcr', header=True):
