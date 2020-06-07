@@ -121,6 +121,69 @@ class GooglePy():
         return service
 
 
+    def _build_table(self, resp):
+        '''Builds table using raw API response data, retaining formatting metadata
+
+        Parameters
+        ----------
+        resp
+
+        Returns
+        -------
+
+        '''
+        # Ensure row has all cells, fill missing cells w/ default values
+        def fill_missing_cells(cell_list, filler):
+            diff = len(col_widths) - len(cell_list)
+            if diff > 0:
+                cell_list += diff * [filler]
+            return cell_list
+
+        default_val = ''
+        default_fmt = {'backgroundColor': {'red': 1, 'green': 1, 'blue': 1},
+                       'padding': {'right': 3, 'left': 3},
+                       'verticalAlignment': 'BOTTOM',
+                       'wrapStrategy': 'OVERFLOW_CELL',
+                       'textFormat': {'foregroundColor': {},
+                                      'fontFamily': 'Calibri',
+                                      'fontSize': 11,
+                                      'bold': False,
+                                      'italic': False,
+                                      'strikethrough': False,
+                                      'underline': False,
+                                      'foregroundColorStyle': {'rgbColor': {}}},
+                       'backgroundColorStyle': {'rgbColor': {'red': 1, 'green': 1, 'blue': 1}}}
+
+        data = {} # orderd by rows
+        data['values'] = {}
+        data['format'] = {}
+
+        col_widths = [col['pixelSize'] for col in resp['sheets'][0]['data'][0]['columnMetadata']]
+
+        rows = resp['sheets'][0]['data'][0]['rowData']
+        for i, row in enumerate(rows):
+            cell_vals = []
+            cell_fmt = []
+            for cell in row['values']:
+                try:
+                    cell_vals.append(cell['formattedValue'])
+                except KeyError:
+                    cell_vals.append(default_val)
+
+                try:
+                    cell_fmt.append(cell['effectiveFormat'])
+                except KeyError:
+                    cell_fmt.append(default_fmt)
+
+            data['values'][f'row{i}'] = fill_missing_cells(cell_vals, default_val)
+            data['format'][f'row{i}'] = fill_missing_cells(cell_fmt, default_fmt)
+
+        vals_df = pd.DataFrame.from_dict(data['values'], orient='index')
+        fmt_df = pd.DataFrame.from_dict(data['format'], orient='index')
+
+        return vals_df, fmt_df, col_widths
+
+
     def _api_spreadsheet_values(self, spreadsheet_id, range_name):
         if 'sheets' not in self.scope_types:
             raise AttributeError('Incorrect api scope')
@@ -131,11 +194,15 @@ class GooglePy():
                                     range=range_name).execute()
         values = result.get('values', [])
 
-        # full = service.spreadsheets().get(spreadsheetId=spreadsheet_id, ranges=range_name, includeGridData=True).execute()
+        full = service.spreadsheets().get(spreadsheetId=spreadsheet_id, ranges=range_name,
+                                          includeGridData=True).execute()
 
-        return values
+        vals, fmt, widths = self._build_table(full)
 
-    def get_spreadsheet(self, spreadsheet_id, cell_range, header_row=False) -> pd.DataFrame:
+        return values, (vals, fmt, widths)
+
+
+    def get_spreadsheet(self, spreadsheet_id, cell_range, header_row=False, **kwargs) -> pd.DataFrame:
         '''
         Retrieve google spreadsheet data to Pandas DataFrame
 
@@ -153,12 +220,18 @@ class GooglePy():
         DataFrame containing values from google sheet
         '''
 
-        values = self._api_spreadsheet_values(spreadsheet_id, cell_range)
+        dev = kwargs.pop('dev', False)
+        values, manual_dfs = self._api_spreadsheet_values(spreadsheet_id, cell_range)
+
         if header_row:
             df = pd.DataFrame.from_records(values[1:], columns=values[0])
         else:
             df = pd.DataFrame.from_records(values)
+
+        if dev:
+            return df, manual_dfs
         return df
+
 
     def get_calendar_ids(self, output=False) -> dict:
         '''
@@ -193,6 +266,7 @@ class GooglePy():
                 break
 
         return name_ids
+
 
     def get_calendar_events(self, cal_id='primary', start=None, end=None) -> list:
         '''

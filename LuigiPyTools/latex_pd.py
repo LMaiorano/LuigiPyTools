@@ -9,6 +9,7 @@ author: lmaio
 
 TODO:
     - allow individual column widths
+    - add sub-table handler for \n
 
 """
 import pandas as pd
@@ -29,12 +30,13 @@ class LatexPandas():
         self._max_col_width = col_width
         self._df = dataframe
         self._df.fillna('', inplace=True)
-        self._df = self._df.applymap(self._make_sub_table)
-
+        self._df = self._df.applymap(self._fix_chars)
 
     def _fix_chars(self, s, charset=('&', '$', '%')):
         for char in charset:
-            s = s.replace(char, '\\'+char)
+            s = s.replace(char, '\\' + char)
+            s = s.replace('\n', '')
+
         return s
 
     def _make_sub_table(self, s):
@@ -101,6 +103,7 @@ class LatexPandas():
         *.tex file containing table data
 
         '''
+        self._df = self._df.applymap(self._make_sub_table)
         if label is None:
             label = 'tab:'+caption.replace(' ', '')[:10]
 
@@ -150,6 +153,63 @@ class LatexPandas():
                     break
                 else:
                     lines[i] = line + '\\addlinespace[\\tableskip]\n'
+
+        with open(fname, 'w') as fout:
+            fout.writelines(lines)
+
+
+    def gen_tex_table_v2(self, fname, caption, label=None, col_form='lcr', header=True, small=True, longtable=False):
+        comment_header = '% ---- Generated using LuigiPyTools.LatexPandas module ---- ' \
+                         '\n\n\n% Include the following lines in preamble:' \
+                         ' \n% \\usepackage{array}' \
+                         ' \n% \\usepackage{ragged2e}' \
+                         ' \n% \\usepackage{xcolor, colortbl}' \
+                         ' \n% \\usepackage{xltabular}' \
+                         ' \n% \\usepackage{longtable}' \
+                         ' \n% \\usepackage[font=small,textfont=it,labelfont=bf]{caption}' \
+                         '\n\n% \\newcolumntype{L}[1]{>{\\raggedright\\arraybackslash}p{#1}}' \
+                         ' \n% \\newcolumntype{C}[1]{>{\\centering\\arraybackslash}p{#1}}' \
+                         ' \n% \\newcolumntype{R}[1]{>{\\raggedleft\\arraybackslash}p{#1}}' \
+                         ' \n% \\captionsetup{justification = centering}' \
+                         ' \n% \\newcommand{\\tableskip}{5pt}' \
+                         '\n\n% To include this table, use at the desired location in the document: ' \
+                         ' \n% \\input{' + ntpath.basename(fname) + '}\n\n'
+
+        if label is None:
+            label = 'tab:'+caption.replace(' ', '')[:10]
+
+        with open(fname, 'w') as tf:
+            with pd.option_context("max_colwidth", 1000):
+                tf.write(comment_header)
+                if not longtable:
+                    tf.write('\\begin{table}[H]\n')
+                    if small:
+                        tf.write('\\small\n')
+
+                    tf.write('\\centering \n\\caption{' + caption + '}\\label{' + label + '} \n')
+                tf.write(self._df.to_latex(float_format="%.3f", escape=False, index=False,
+                                           column_format=col_form, header=header, longtable=longtable))
+                if not longtable:
+                    tf.write('\\end{table}')
+
+        if longtable:
+            self._longtable_modify(fname, caption, label, small=small)
+
+
+    def _longtable_modify(self, fname, caption, label, small):
+        with open(fname, 'r') as fin:
+            lines = fin.readlines()
+
+        for i, line in enumerate(lines):
+            if '\\begin{longtable}' in line:
+                if small:
+                    line = '\\begin{small}\n' + line
+                line += '\\caption{' + caption + '}\\label{' + label + '}\\\\ \n'
+            if '\\end{longtable}' in line:
+                line = '\\bottomrule\n' + line
+                if small:
+                    line += '\\end{small}'
+            lines[i] = line
 
         with open(fname, 'w') as fout:
             fout.writelines(lines)
