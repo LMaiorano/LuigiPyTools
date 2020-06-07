@@ -29,6 +29,7 @@ class TestLatex(unittest.TestCase):
 
     def tearDown(self) -> None:
         shutil.rmtree(self.test_output_dir)
+        filecmp.clear_cache()
 
 
 class BasicPandas(TestLatex):
@@ -67,7 +68,7 @@ class SheetsDataframe(TestLatex):
 
 
 
-    def test_longtable_fixedwidth(self):
+    def test_gsheet_formatting(self):
         header = False
         small = True
 
@@ -76,21 +77,15 @@ class SheetsDataframe(TestLatex):
         data_range = 'Lander N2 Chart!B2:I9'
 
         G = GoogleSheets(self.SCOPES, self.gen_api_creds)
-        df, formatting = G.get_spreadsheet(id, data_range, header_row=False, dev=True)
-
-        # rgb_tex = metadata['fmt_df'].applymap(rgb_cell)  # Extract RGB values to df of tex cellcolor commands
-        #
-        # tex_col_format = tex_col_format_gen(widths, fmt)
+        df, formatting = G.get_spreadsheet(id, data_range, header_row=False)
 
         LP = LatexPandas(df, metadata=formatting)
 
 
         filename = os.path.join(self.test_output_dir, name.replace(' ', '_') + '.tex')
-        LP.gen_tex_table_v2(filename, name, header=header, longtable=True, small=small)
+        LP.gen_tex_table(filename, name, header=header, longtable=True, small=small)
 
         LP.group_table_rows(filename)
 
         assert filecmp.cmp(os.path.join(os.path.dirname(__file__), 'data', 'Formatted_Sys_N2_Chart_ref.tex'),
-                           filename,
-                           shallow=False)
-
+                           filename, shallow=False)

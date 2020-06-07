@@ -1,0 +1,38 @@
+%! Author = lmaio
+%! Date = 6/7/2020
+
+
+
+% Preamble
+\documentclass[11pt]{report}
+
+% Packages
+\usepackage{amsmath}
+\usepackage{geometry}
+
+% Stuff for LatexPandas
+\usepackage{array}
+\usepackage{ragged2e}
+\usepackage{xcolor, colortbl}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{xltabular}
+\usepackage[font=small,textfont=it,labelfont=bf]{caption}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\captionsetup{justification = centering}
+\newcommand{\tableskip}{5pt}
+
+
+% Document
+\begin{document}
+\newgeometry{a4paper,total={170mm,257mm}, left=20mm, right=20mm, top=20mm, bottom=20mm}
+
+
+    \chapter{Test Charts}
+        \input{data/Formatted_Sys_N2_Chart_ref.tex}
+%        \input{test_output/test_out.tex}
+
+\end{document}

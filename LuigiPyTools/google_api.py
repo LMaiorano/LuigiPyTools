@@ -317,7 +317,7 @@ if __name__ == '__main__':
     SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/spreadsheets.readonly']
     cal_api_creds = 'py_general_creds.json'
 
-    Gcal = GooglePy(SCOPES, cal_api_creds)
+
     # Gcal._get_calendar_ids()
 
     # tu_timetable = '8r63unklasvr8dgcjenfm9odh2ptkk46@import.calendar.google.com'

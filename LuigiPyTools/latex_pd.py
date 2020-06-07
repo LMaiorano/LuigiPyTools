@@ -8,8 +8,8 @@ date: 5/18/2020
 author: lmaio
 
 TODO:
-    - allow individual column widths
     - add sub-table handler for \n
+    - allow longtable use when no metadata is provided... replace with gen_table_v2
 
 """
 import pandas as pd
@@ -54,22 +54,34 @@ class LatexPandas():
         tex = '\\cellcolor[rgb]{' + r + ',' + g + ',' + b + '} '
         return tex
 
-    def _tex_col_format_gen(self, widths, fmt_df):
+    def _tex_col_format_metadata(self, metadata):
         '''Calculate col width percentages of \textwidth based on col widths
         create table aligment string for column_format
         https://tex.stackexchange.com/questions/62710/tabular-with-p-type-columns-to-fill-page-width'''
-
-        rel_widths = [round(w / sum(widths), 4) for w in widths]  # fractions of tot num cols (for tabularx)
-        row0 = fmt_df.iloc[0]
-        h_fmt = [col['horizontalAlignment'] for col in row0]
-        align_rename = {'LEFT': 'L', 'CENTER': 'C', 'RIGHT': 'R'}
-        h_align = [align_rename.get(item, item) for item in h_fmt]
-
         tex = ''
-        for a, w in zip(h_align, rel_widths):
-            # col_str = ' %s{%.4f\\linewidth}' % (a, w)
-            col_str = '%s{\\dimexpr %.4f\\linewidth-2\\tabcolsep} ' % (a, w)
-            tex += (col_str)
+
+        # Allow str to be passed for col_form
+        try:
+            widths = metadata['col_widths']
+            fmt_df = metadata['fmt_df']
+
+            rel_widths = [round(w / sum(widths), 4) for w in widths]  # fractions of tot num cols (for tabularx)
+            row0 = fmt_df.iloc[0]
+            h_fmt = [col['horizontalAlignment'] for col in row0]
+            align_rename = {'LEFT': 'L', 'CENTER': 'C', 'RIGHT': 'R'}
+            h_align = [align_rename.get(item, item) for item in h_fmt]
+
+            for a, w in zip(h_align, rel_widths):
+                col_str = '%s{\\dimexpr %.4f\\linewidth-2\\tabcolsep} ' % (a, w)
+                tex += col_str
+        except KeyError:
+            pass
+
+        # TODO: Solution for generic column alignment
+        # except KeyError:
+        #     col_form = metadata
+        #     for a in col_form:
+        #         tex += '>{\\begin{varwidth}{4cm}}l<{\end{varwidth}}'
 
         return tex
 
@@ -121,7 +133,46 @@ class LatexPandas():
         return sub_table
 
 
-    def gen_tex_table(self, fname, caption, label=None, col_form='lcr', header=True):
+    def group_table_rows(self, fname):
+        '''Applies \tableskip vertical space between rows in table.
+
+        This removes the need for horizontal lines in table; conforming to the
+        LateX booktabs table style. \tableskip can be defined globally in the LateX
+        main.tex file for consistent usage throughout document.
+
+        Parameters
+        ----------
+        fname: str
+            Filename ending in .tex containing LateX table to modify. Must be generated
+            using LatexPandas.gen_tex_table
+
+        Returns
+        -------
+        Modifies existing *.tex file.
+        '''
+        with open(fname, 'r') as fin:
+            lines = fin.readlines()
+
+        tabletop = [i for i, s in enumerate(lines) if 'toprule' in s][0]
+        for i, line in enumerate(lines):
+            if i > tabletop:
+                if '\\bottomrule' in line:
+                    break
+                else:
+                    lines[i] = line + '\\addlinespace[\\tableskip]\n'
+
+        with open(fname, 'w') as fout:
+            fout.writelines(lines)
+
+
+    def gen_tex_table(self, fname, caption, label=None, col_form='lcr', header=True, small=True, longtable=True):
+        if self._metadata:
+            self._gen_tex_table_v2(fname, caption, label, col_form, header, small, longtable)
+        else:
+            self._gen_tex_table_v1(fname, caption, label, col_form, header)
+
+
+    def _gen_tex_table_v1(self, fname, caption, label=None, col_form='lcr', header=True):
         '''Save pandas dataframe to *.tex file, for direct usage in LaTeX report
 
         Parameters
@@ -167,39 +218,7 @@ class LatexPandas():
                 tf.write('}\n\\end{table}')
 
 
-    def group_table_rows(self, fname):
-        '''Applies \tableskip vertical space between rows in table.
-
-        This removes the need for horizontal lines in table; conforming to the
-        LateX booktabs table style. \tableskip can be defined globally in the LateX
-        main.tex file for consistent usage throughout document.
-
-        Parameters
-        ----------
-        fname: str
-            Filename ending in .tex containing LateX table to modify. Must be generated
-            using LatexPandas.gen_tex_table
-
-        Returns
-        -------
-        Modifies existing *.tex file.
-        '''
-        with open(fname, 'r') as fin:
-            lines = fin.readlines()
-
-        tabletop = [i for i, s in enumerate(lines) if 'toprule' in s][0]
-        for i, line in enumerate(lines):
-            if i > tabletop:
-                if '\\bottomrule' in line:
-                    break
-                else:
-                    lines[i] = line + '\\addlinespace[\\tableskip]\n'
-
-        with open(fname, 'w') as fout:
-            fout.writelines(lines)
-
-
-    def gen_tex_table_v2(self, fname, caption, label=None, col_form='lcr', header=True, small=True, longtable=True):
+    def _gen_tex_table_v2(self, fname, caption, label=None, col_form='lcr', header=True, small=True, longtable=True):
         '''
         Allows longtable to be used.
         Args:
@@ -216,25 +235,34 @@ class LatexPandas():
         '''
         comment_header = '% ---- Generated using LuigiPyTools.LatexPandas module ---- ' \
                          '\n\n\n% Include the following lines in preamble:' \
-                         ' \n% \\usepackage{array}' \
-                         ' \n% \\usepackage{ragged2e}' \
-                         ' \n% \\usepackage{xcolor, colortbl}' \
-                         ' \n% \\usepackage{xltabular}' \
-                         ' \n% \\usepackage{longtable}' \
-                         ' \n% \\usepackage[font=small,textfont=it,labelfont=bf]{caption}' \
+                         '\n% \\usepackage{array}' \
+                         '\n% \\usepackage{ragged2e}' \
+                         '\n% \\usepackage{xcolor, colortbl}' \
+                         '\n% \\usepackage{booktabs}' \
+                         '\n% \\usepackage{longtable}' \
+                         '\n% \\usepackage[font=small,textfont=it,labelfont=bf]{caption}' \
                          '\n\n% \\newcolumntype{L}[1]{>{\\raggedright\\arraybackslash}p{#1}}' \
-                         ' \n% \\newcolumntype{C}[1]{>{\\centering\\arraybackslash}p{#1}}' \
-                         ' \n% \\newcolumntype{R}[1]{>{\\raggedleft\\arraybackslash}p{#1}}' \
-                         ' \n% \\captionsetup{justification = centering}' \
-                         ' \n% \\newcommand{\\tableskip}{5pt}' \
+                         '\n% \\newcolumntype{C}[1]{>{\\centering\\arraybackslash}p{#1}}' \
+                         '\n% \\newcolumntype{R}[1]{>{\\raggedleft\\arraybackslash}p{#1}}' \
+                         '\n% \\captionsetup{justification = centering}' \
+                         '\n% \\newcommand{\\tableskip}{5pt}' \
                          '\n\n% To include this table, use at the desired location in the document: ' \
-                         ' \n% \\input{' + ntpath.basename(fname) + '}\n\n'
+                         '\n% \\input{' + ntpath.basename(fname) + '}\n\n'
+
 
         if label is None:
             label = 'tab:'+caption.replace(' ', '')[:10]
 
+        if col_form == 'lcr':
+            col_form = 'l' + 'c' * len(self._df.columns) + 'r'
+        elif len(col_form) == 1 or len(col_form) != len(self._df.columns):
+            col_form = col_form * len(self._df.columns)
+        # col_form = self._tex_col_format_metadata(col_form)
+
+
         if self._metadata:
-            col_form = self._tex_col_format_gen(self._metadata['col_widths'], self._metadata['fmt_df'])
+            longtable = True # use longtable on when col width data is given
+            col_form = self._tex_col_format_metadata(self._metadata)
 
         with open(fname, 'w') as tf:
             with pd.option_context("max_colwidth", 1000):
@@ -262,6 +290,7 @@ class LatexPandas():
             if '\\begin{longtable}' in line:
                 if small:
                     line = '\\begin{small}\n' + line
+                line = line.replace('{longtable}', '{longtable}[H]')
                 line += '\\caption{' + caption + '}\\label{' + label + '}\\\\ \n'
             if '\\end{longtable}' in line:
                 line = '\\bottomrule\n' + line

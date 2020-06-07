@@ -14,7 +14,7 @@ setup(
     name='LuigiPyTools',
     packages=['LuigiPyTools'],
     description='Tools commonly used in engineering projects',
-    version='0.2.3',
+    version='0.3.0',
     url='https://github.com/LMaiorano/LuigiPyTools',
     author='Luigi Maiorano',
     author_email='lmaiorano97@gmail.com',
