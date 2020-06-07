@@ -158,7 +158,21 @@ class LatexPandas():
             fout.writelines(lines)
 
 
-    def gen_tex_table_v2(self, fname, caption, label=None, col_form='lcr', header=True, small=True, longtable=False):
+    def gen_tex_table_v2(self, fname, caption, label=None, col_form='lcr', header=True, small=True, longtable=True):
+        '''
+        Allows longtable to be used.
+        Args:
+            fname:
+            caption:
+            label:
+            col_form:
+            header:
+            small:
+            longtable:
+
+        Returns:
+
+        '''
         comment_header = '% ---- Generated using LuigiPyTools.LatexPandas module ---- ' \
                          '\n\n\n% Include the following lines in preamble:' \
                          ' \n% \\usepackage{array}' \
@@ -213,3 +227,33 @@ class LatexPandas():
 
         with open(fname, 'w') as fout:
             fout.writelines(lines)
+
+    def _rgb_cell(self, d):
+        r = str(d['backgroundColor']['red'])
+        g = str(d['backgroundColor']['green'])
+        b = str(d['backgroundColor']['blue'])
+
+        if (r, g, b) == ('1', '1', '1'):
+            return ''
+
+        tex = '\\cellcolor[rgb]{' + r + ',' + g + ',' + b + '} '
+        return tex
+
+    def _tex_col_format_gens(self, widths, fmt_df):
+        '''Calculate col width percentages of \textwidth based on col widths
+        create table aligment string for column_format
+        https://tex.stackexchange.com/questions/62710/tabular-with-p-type-columns-to-fill-page-width'''
+
+        rel_widths = [round(w / sum(widths), 4) for w in widths]  # fractions of tot num cols (for tabularx)
+        row0 = fmt_df.iloc[0]
+        h_fmt = [col['horizontalAlignment'] for col in row0]
+        align_rename = {'LEFT': 'L', 'CENTER': 'C', 'RIGHT': 'R'}
+        h_align = [align_rename.get(item, item) for item in h_fmt]
+
+        tex = ''
+        for a, w in zip(h_align, rel_widths):
+            # col_str = ' %s{%.4f\\linewidth}' % (a, w)
+            col_str = '%s{\\dimexpr %.4f\\linewidth-2\\tabcolsep} ' % (a, w)
+            tex += (col_str)
+
+        return tex

@@ -46,7 +46,7 @@ class BasicPandas(TestLatex):
 
 
 class SheetsDataframe(TestLatex):
-    def test_gsheets_latex(self):
+    def test_standard_table(self):
         name = 'AOCS N2 chart'
         id = '1KW31J20B3s-nx_UxVzlym19yM6-gAFdctSvjBQq9yi8'
         data_range = 'AOCS!A1:K11'
@@ -54,7 +54,7 @@ class SheetsDataframe(TestLatex):
         print('the one i want')
 
         G = GooglePy(self.SCOPES, self.gen_api_creds)
-        df = G.get_spreadsheet(id, data_range, header_row=False, dev=False)
+        df = G.get_spreadsheet(id, data_range, header_row=False, dev=False)[0]
 
         LP = LatexPandas(df, col_width=20)
 
@@ -69,7 +69,7 @@ class SheetsDataframe(TestLatex):
 
 
     @unittest.expectedFailure
-    def test_longtable_fixedwidth_gsheet(self):
+    def test_longtable_fixedwidth(self):
         header = False
         small = True
 

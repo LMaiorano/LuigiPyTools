@@ -132,9 +132,10 @@ class GooglePy():
         -------
 
         '''
+
         # Ensure row has all cells, fill missing cells w/ default values
         def fill_missing_cells(cell_list, filler):
-            diff = len(col_widths) - len(cell_list)
+            diff = len(data['col_widths']) - len(cell_list)
             if diff > 0:
                 cell_list += diff * [filler]
             return cell_list
@@ -154,11 +155,11 @@ class GooglePy():
                                       'foregroundColorStyle': {'rgbColor': {}}},
                        'backgroundColorStyle': {'rgbColor': {'red': 1, 'green': 1, 'blue': 1}}}
 
-        data = {} # orderd by rows
+        data = {}  # orderd by rows
         data['values'] = {}
         data['format'] = {}
 
-        col_widths = [col['pixelSize'] for col in resp['sheets'][0]['data'][0]['columnMetadata']]
+        data['col_widths'] = [col['pixelSize'] for col in resp['sheets'][0]['data'][0]['columnMetadata']]
 
         rows = resp['sheets'][0]['data'][0]['rowData']
         for i, row in enumerate(rows):
@@ -178,31 +179,10 @@ class GooglePy():
             data['values'][f'row{i}'] = fill_missing_cells(cell_vals, default_val)
             data['format'][f'row{i}'] = fill_missing_cells(cell_fmt, default_fmt)
 
-        vals_df = pd.DataFrame.from_dict(data['values'], orient='index')
-        fmt_df = pd.DataFrame.from_dict(data['format'], orient='index')
-
-        return vals_df, fmt_df, col_widths
+        return data
 
 
-    def _api_spreadsheet_values(self, spreadsheet_id, range_name):
-        if 'sheets' not in self.scope_types:
-            raise AttributeError('Incorrect api scope')
-        # Call the Sheets API
-        service = self._service_connect('sheets')
-        sheet = service.spreadsheets()
-        result = sheet.values().get(spreadsheetId=spreadsheet_id,
-                                    range=range_name).execute()
-        values = result.get('values', [])
-
-        full = service.spreadsheets().get(spreadsheetId=spreadsheet_id, ranges=range_name,
-                                          includeGridData=True).execute()
-
-        vals, fmt, widths = self._build_table(full)
-
-        return values, (vals, fmt, widths)
-
-
-    def get_spreadsheet(self, spreadsheet_id, cell_range, header_row=False, **kwargs) -> pd.DataFrame:
+    def get_spreadsheet(self, spreadsheet_id, cell_range, header_row=False, **kwargs) -> tuple:
         '''
         Retrieve google spreadsheet data to Pandas DataFrame
 
@@ -221,16 +201,30 @@ class GooglePy():
         '''
 
         dev = kwargs.pop('dev', False)
-        values, manual_dfs = self._api_spreadsheet_values(spreadsheet_id, cell_range)
+
+        if 'sheets' not in self.scope_types:
+            raise AttributeError('Incorrect api scope')
+        # Call the Sheets API
+        service = self._service_connect('sheets')
+        full_resp = service.spreadsheets().get(spreadsheetId=spreadsheet_id, ranges=cell_range,
+                                          includeGridData=True).execute()
+
+        sheet_data = self._build_table(full_resp)
 
         if header_row:
-            df = pd.DataFrame.from_records(values[1:], columns=values[0])
+            df = pd.DataFrame.from_dict(sheet_data['values'][1:], columns=sheet_data['values'][0], orient='index')
         else:
-            df = pd.DataFrame.from_records(values)
+            df = pd.DataFrame.from_dict(sheet_data['values'], orient='index')
 
-        if dev:
-            return df, manual_dfs
-        return df
+        fmt_df = pd.DataFrame.from_dict(sheet_data['format'], orient='index')
+
+        return df, fmt_df, sheet_data['col_widths']
+
+
+
+
+
+
 
 
     def get_calendar_ids(self, output=False) -> dict:
