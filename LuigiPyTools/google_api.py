@@ -28,13 +28,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 
-class GooglePy():
-    '''
-    Description
-    -----------
-    Interface with Google sheets and calendars
-
-    '''
+class GoogleService():
     def __init__(self, SCOPES, api_credentials, auth_dir=None):
         '''
 
@@ -50,7 +44,7 @@ class GooglePy():
             Directory should be included in .gitignore
         '''
         # Directory of script which is creating this object. Must run here in __init__
-        frame = inspect.stack()[1]
+        frame = inspect.stack()[2]
         module = inspect.getmodule(frame[0])
         self.__call_module_dir = os.path.dirname(module.__file__)
         if not auth_dir:
@@ -121,6 +115,18 @@ class GooglePy():
         return service
 
 
+
+class GoogleSheets(GoogleService):
+    '''
+    Description
+    -----------
+    Interface with Google sheets and calendars
+
+    '''
+    def __init__(self, SCOPES, api_credentials, auth_dir=None):
+        super().__init__(SCOPES, api_credentials, auth_dir=auth_dir)
+
+
     def _build_table(self, resp):
         '''Builds table using raw API response data, retaining formatting metadata
 
@@ -182,7 +188,7 @@ class GooglePy():
         return data
 
 
-    def get_spreadsheet(self, spreadsheet_id, cell_range, header_row=False, **kwargs) -> tuple:
+    def get_spreadsheet(self, spreadsheet_id, cell_range, **kwargs) -> tuple:
         '''
         Retrieve google spreadsheet data to Pandas DataFrame
 
@@ -199,8 +205,7 @@ class GooglePy():
         -------
         DataFrame containing values from google sheet
         '''
-
-        dev = kwargs.pop('dev', False)
+        header_row = kwargs.pop('header_row', True)
 
         if 'sheets' not in self.scope_types:
             raise AttributeError('Incorrect api scope')
@@ -218,14 +223,20 @@ class GooglePy():
 
         fmt_df = pd.DataFrame.from_dict(sheet_data['format'], orient='index')
 
-        return df, fmt_df, sheet_data['col_widths']
+        metadata = {}
+        metadata['fmt_df'] = fmt_df
+        metadata['col_widths'] = sheet_data['col_widths']
+
+        return df, metadata
 
 
 
 
 
 
-
+class GoogleCalendar(GoogleService):
+    def __init__(self, SCOPES, api_credentials, auth_dir=None):
+        super().__init__(SCOPES, api_credentials, auth_dir=auth_dir)
 
     def get_calendar_ids(self, output=False) -> dict:
         '''

@@ -11,7 +11,7 @@ author: lmaio
 import pandas as pd
 import os
 import unittest
-from LuigiPyTools import LatexPandas, GooglePy
+from LuigiPyTools import LatexPandas, GoogleSheets, GoogleCalendar
 import filecmp
 import shutil
 
@@ -51,9 +51,7 @@ class SheetsDataframe(TestLatex):
         id = '1KW31J20B3s-nx_UxVzlym19yM6-gAFdctSvjBQq9yi8'
         data_range = 'AOCS!A1:K11'
 
-        print('the one i want')
-
-        G = GooglePy(self.SCOPES, self.gen_api_creds)
+        G = GoogleSheets(self.SCOPES, self.gen_api_creds)
         df = G.get_spreadsheet(id, data_range, header_row=False, dev=False)[0]
 
         LP = LatexPandas(df, col_width=20)
@@ -68,27 +66,31 @@ class SheetsDataframe(TestLatex):
                            shallow=False)
 
 
-    @unittest.expectedFailure
+
     def test_longtable_fixedwidth(self):
         header = False
         small = True
 
         id = '1KW31J20B3s-nx_UxVzlym19yM6-gAFdctSvjBQq9yi8'
-        name = 'System N2 chart'
+        name = 'Formatted Sys N2 Chart'
         data_range = 'Lander N2 Chart!B2:I9'
 
-        G = GooglePy(self.SCOPES, self.gen_api_creds)
-        df, fmt, widths = G.get_spreadsheet(id, data_range, header_row=False, dev=True)[1]
+        G = GoogleSheets(self.SCOPES, self.gen_api_creds)
+        df, formatting = G.get_spreadsheet(id, data_range, header_row=False, dev=True)
 
-        rgb_tex = fmt.applymap(rgb_cell)  # Extract RGB values to df of tex cellcolor commands
+        # rgb_tex = metadata['fmt_df'].applymap(rgb_cell)  # Extract RGB values to df of tex cellcolor commands
+        #
+        # tex_col_format = tex_col_format_gen(widths, fmt)
 
-        tex_col_format = tex_col_format_gen(widths, fmt)
+        LP = LatexPandas(df, metadata=formatting)
 
-        LP = LatexPandas(df, col_width=col_width)
-        LP._df = rgb_tex.apply(lambda x: x + LP._df[x.name])
 
-        filename = os.path.join(self.LOCAL_DIR, name.replace(' ', '_') + '.tex')
-        LP.gen_tex_table_v2(filename, name, col_form=tex_col_format, header=header, longtable=True, small=small)
+        filename = os.path.join(self.test_output_dir, name.replace(' ', '_') + '.tex')
+        LP.gen_tex_table_v2(filename, name, header=header, longtable=True, small=small)
 
         LP.group_table_rows(filename)
+
+        assert filecmp.cmp(os.path.join(os.path.dirname(__file__), 'data', 'Formatted_Sys_N2_Chart_ref.tex'),
+                           filename,
+                           shallow=False)
 

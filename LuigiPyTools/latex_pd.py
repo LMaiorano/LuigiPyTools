@@ -17,7 +17,7 @@ import numpy as np
 import ntpath
 
 class LatexPandas():
-    def __init__(self, dataframe, col_width=45):
+    def __init__(self, dataframe, metadata=None, col_width=45):
         '''Convert Pandas Dataframe to latex table
 
         Parameters
@@ -27,10 +27,14 @@ class LatexPandas():
         col_width: int, default 45
             Max character width per column, equal for all columns
         '''
+        self._metadata = metadata
         self._max_col_width = col_width
         self._df = dataframe
         self._df.fillna('', inplace=True)
         self._df = self._df.applymap(self._fix_chars)
+
+        if self._metadata:
+            self._gsheet_formatting(metadata)
 
     def _fix_chars(self, s, charset=('&', '$', '%')):
         for char in charset:
@@ -38,6 +42,42 @@ class LatexPandas():
             s = s.replace('\n', '')
 
         return s
+
+    def _rgb_cell(self, d):
+        r = str(d['backgroundColor']['red'])
+        g = str(d['backgroundColor']['green'])
+        b = str(d['backgroundColor']['blue'])
+
+        if (r, g, b) == ('1', '1', '1'):
+            return ''
+
+        tex = '\\cellcolor[rgb]{' + r + ',' + g + ',' + b + '} '
+        return tex
+
+    def _tex_col_format_gen(self, widths, fmt_df):
+        '''Calculate col width percentages of \textwidth based on col widths
+        create table aligment string for column_format
+        https://tex.stackexchange.com/questions/62710/tabular-with-p-type-columns-to-fill-page-width'''
+
+        rel_widths = [round(w / sum(widths), 4) for w in widths]  # fractions of tot num cols (for tabularx)
+        row0 = fmt_df.iloc[0]
+        h_fmt = [col['horizontalAlignment'] for col in row0]
+        align_rename = {'LEFT': 'L', 'CENTER': 'C', 'RIGHT': 'R'}
+        h_align = [align_rename.get(item, item) for item in h_fmt]
+
+        tex = ''
+        for a, w in zip(h_align, rel_widths):
+            # col_str = ' %s{%.4f\\linewidth}' % (a, w)
+            col_str = '%s{\\dimexpr %.4f\\linewidth-2\\tabcolsep} ' % (a, w)
+            tex += (col_str)
+
+        return tex
+
+
+    def _gsheet_formatting(self, metadata):
+        rgb_tex = metadata['fmt_df'].applymap(self._rgb_cell)  # Extract RGB values to df of tex cellcolor commands
+        self._df = rgb_tex.apply(lambda x: x + self._df[x.name])
+
 
     def _make_sub_table(self, s):
         # FIXME: recognize existing line breaks in a cell
@@ -126,6 +166,7 @@ class LatexPandas():
                                            column_format=col_form, header=header))
                 tf.write('}\n\\end{table}')
 
+
     def group_table_rows(self, fname):
         '''Applies \tableskip vertical space between rows in table.
 
@@ -192,6 +233,9 @@ class LatexPandas():
         if label is None:
             label = 'tab:'+caption.replace(' ', '')[:10]
 
+        if self._metadata:
+            col_form = self._tex_col_format_gen(self._metadata['col_widths'], self._metadata['fmt_df'])
+
         with open(fname, 'w') as tf:
             with pd.option_context("max_colwidth", 1000):
                 tf.write(comment_header)
@@ -228,32 +272,7 @@ class LatexPandas():
         with open(fname, 'w') as fout:
             fout.writelines(lines)
 
-    def _rgb_cell(self, d):
-        r = str(d['backgroundColor']['red'])
-        g = str(d['backgroundColor']['green'])
-        b = str(d['backgroundColor']['blue'])
 
-        if (r, g, b) == ('1', '1', '1'):
-            return ''
 
-        tex = '\\cellcolor[rgb]{' + r + ',' + g + ',' + b + '} '
-        return tex
 
-    def _tex_col_format_gens(self, widths, fmt_df):
-        '''Calculate col width percentages of \textwidth based on col widths
-        create table aligment string for column_format
-        https://tex.stackexchange.com/questions/62710/tabular-with-p-type-columns-to-fill-page-width'''
 
-        rel_widths = [round(w / sum(widths), 4) for w in widths]  # fractions of tot num cols (for tabularx)
-        row0 = fmt_df.iloc[0]
-        h_fmt = [col['horizontalAlignment'] for col in row0]
-        align_rename = {'LEFT': 'L', 'CENTER': 'C', 'RIGHT': 'R'}
-        h_align = [align_rename.get(item, item) for item in h_fmt]
-
-        tex = ''
-        for a, w in zip(h_align, rel_widths):
-            # col_str = ' %s{%.4f\\linewidth}' % (a, w)
-            col_str = '%s{\\dimexpr %.4f\\linewidth-2\\tabcolsep} ' % (a, w)
-            tex += (col_str)
-
-        return tex
