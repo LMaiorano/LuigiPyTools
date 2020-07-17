@@ -3,6 +3,8 @@
 
 LuigiPyTools provides tools commonly used in engineering and course-related projects. It is intended simplify the use of common code and enable easy updates when new features are needed. Typical usage often looks like this:
 
+## This code needs to be updated to the newer versions
+
     #!/usr/bin/env python
 
     import os
